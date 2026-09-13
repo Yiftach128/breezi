@@ -1,7 +1,6 @@
 package com.pollution.datawriter;
 
 import com.pollution.common.PollutionLogger;
-import com.pollution.common.entities.PollutionAlert;
 import com.pollution.common.entities.PollutionAverage;
 import com.pollution.common.entities.PollutionData;
 import com.pollution.common.pubsub.ISubscriber;
@@ -11,11 +10,11 @@ import java.util.Objects;
 import org.slf4j.Logger;
 
 /**
- * Consumes the streams of readings, averages and alerts and stores them.
- * Today only {@link PollutionData} readings are stored: each goes to the
+ * Consumes the streams of readings and averages and stores them. Today only
+ * {@link PollutionData} readings are stored: each goes to the
  * {@link IPollutionRepository} for keeps and to the
- * {@link ILatestReadingStore} as its series' current reading; averages and
- * alerts are only logged.
+ * {@link ILatestReadingStore} as its series' current reading; averages are
+ * only logged.
  * <p>
  * Messages arrive on the subscribers' threads. The two stores are updated
  * independently: a failure in one is logged and does not stop the other,
@@ -29,28 +28,24 @@ public class PollutionDataWriterService implements AutoCloseable {
 
     private final ISubscriber<PollutionData> pollutionSubscriber;
     private final ISubscriber<PollutionAverage> averageSubscriber;
-    private final ISubscriber<PollutionAlert> alertSubscriber;
     private final IPollutionRepository repository;
     private final ILatestReadingStore latestReadings;
 
     public PollutionDataWriterService(ISubscriber<PollutionData> pollutionSubscriber,
                                       ISubscriber<PollutionAverage> averageSubscriber,
-                                      ISubscriber<PollutionAlert> alertSubscriber,
                                       IPollutionRepository repository,
                                       ILatestReadingStore latestReadings) {
         this.pollutionSubscriber = Objects.requireNonNull(pollutionSubscriber, "pollutionSubscriber");
         this.averageSubscriber = Objects.requireNonNull(averageSubscriber, "averageSubscriber");
-        this.alertSubscriber = Objects.requireNonNull(alertSubscriber, "alertSubscriber");
         this.repository = Objects.requireNonNull(repository, "repository");
         this.latestReadings = Objects.requireNonNull(latestReadings, "latestReadings");
     }
 
-    /** Subscribes to readings, averages and alerts. */
+    /** Subscribes to readings and averages. */
     public void start() {
         pollutionSubscriber.subscribe(this::handleReading);
         averageSubscriber.subscribe(this::handleAverage);
-        alertSubscriber.subscribe(this::handleAlert);
-        logger.info("subscribed to readings, averages and alerts");
+        logger.info("subscribed to readings and averages");
     }
 
     private void handleReading(PollutionData reading) {
@@ -87,15 +82,10 @@ public class PollutionDataWriterService implements AutoCloseable {
         logger.info("received {} (not stored yet)", average);
     }
 
-    private void handleAlert(PollutionAlert alert) {
-        logger.info("received {} (not stored yet)", alert);
-    }
-
     @Override
     public void close() {
         pollutionSubscriber.close();
         averageSubscriber.close();
-        alertSubscriber.close();
         repository.close();
         latestReadings.close();
     }

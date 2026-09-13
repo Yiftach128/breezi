@@ -1,7 +1,6 @@
 package com.pollution.datawriter;
 
 import com.pollution.common.PollutionLogger;
-import com.pollution.common.entities.PollutionAlert;
 import com.pollution.common.entities.PollutionAverage;
 import com.pollution.common.entities.PollutionData;
 import com.pollution.common.health.IHealthServer;
@@ -31,11 +30,10 @@ public class DataWriterApplication {
         try {
             ISubscriber<PollutionData> pollutionSubscriber = Wiring.createPollutionSubscriber();
             ISubscriber<PollutionAverage> averageSubscriber = Wiring.createAverageSubscriber();
-            ISubscriber<PollutionAlert> alertSubscriber = Wiring.createAlertSubscriber();
             IPollutionRepository repository = Wiring.createPollutionRepository();
             ILatestReadingStore latestReadings = Wiring.createLatestReadingStore();
             PollutionDataWriterService service = Wiring.createWriterService(
-                    pollutionSubscriber, averageSubscriber, alertSubscriber, repository, latestReadings);
+                    pollutionSubscriber, averageSubscriber, repository, latestReadings);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 health.markNotReady();
                 service.close();

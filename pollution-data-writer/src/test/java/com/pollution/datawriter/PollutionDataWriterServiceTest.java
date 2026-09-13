@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.pollution.common.entities.Pollutant;
-import com.pollution.common.entities.PollutionAlert;
 import com.pollution.common.entities.PollutionAverage;
 import com.pollution.common.entities.PollutionData;
 import com.pollution.common.entities.WindowAverage;
@@ -27,11 +26,10 @@ class PollutionDataWriterServiceTest {
 
     private final ManualSubscriber<PollutionData> readings = new ManualSubscriber<>();
     private final ManualSubscriber<PollutionAverage> averages = new ManualSubscriber<>();
-    private final ManualSubscriber<PollutionAlert> alerts = new ManualSubscriber<>();
     private final RecordingRepository repository = new RecordingRepository();
     private final RecordingLatestReadingStore latest = new RecordingLatestReadingStore();
     private final PollutionDataWriterService service =
-            new PollutionDataWriterService(readings, averages, alerts, repository, latest);
+            new PollutionDataWriterService(readings, averages, repository, latest);
 
     @BeforeEach
     void start() {
@@ -107,10 +105,9 @@ class PollutionDataWriterServiceTest {
     }
 
     @Test
-    void averagesAndAlertsAreOnlyLoggedForNow() {
+    void averagesAreOnlyLoggedForNow() {
         averages.deliver(new PollutionAverage(CITY, SOURCE, Pollutant.PM2_5,
                 List.of(new WindowAverage(Duration.ofMinutes(10), 12.5, 3)), T0));
-        alerts.deliver(new PollutionAlert(CITY, SOURCE, Pollutant.PM2_5, null, 60, 50, T0));
 
         assertEquals(List.of(), repository.saved());
         assertEquals(List.of(), latest.saved());
@@ -122,7 +119,6 @@ class PollutionDataWriterServiceTest {
 
         assertTrue(readings.isClosed());
         assertTrue(averages.isClosed());
-        assertTrue(alerts.isClosed());
         assertTrue(repository.isClosed());
         assertTrue(latest.isClosed());
     }

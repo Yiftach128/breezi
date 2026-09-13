@@ -1,6 +1,5 @@
 package com.pollution.alertservice.config;
 
-import static com.pollution.common.config.Config.POLLUTION_ALERT_TOPIC;
 import static com.pollution.common.config.Config.POLLUTION_AVERAGE_TOPIC;
 import static com.pollution.common.config.Config.POLLUTION_DATA_TOPIC;
 import static com.pollution.common.config.Config.getHealthPort;
@@ -21,11 +20,8 @@ import com.pollution.common.entities.PollutionData;
 import com.pollution.common.health.IHealthServer;
 import com.pollution.common.health.NoopHealthServer;
 import com.pollution.common.health.jdk.JdkHealthServer;
-import com.pollution.common.pubsub.IPublisher;
 import com.pollution.common.pubsub.ISubscriber;
 import com.pollution.common.pubsub.kafka.JsonDeserializer;
-import com.pollution.common.pubsub.kafka.JsonSerializer;
-import com.pollution.common.pubsub.kafka.KafkaPublisher;
 import com.pollution.common.pubsub.kafka.KafkaSubscriber;
 import com.pollution.common.thresholds.Thresholds;
 import com.pollution.persistence.IPollutionCache;
@@ -52,10 +48,6 @@ public final class Wiring {
 
     public static ISubscriber<PollutionAverage> createAverageSubscriber() {
         return new KafkaSubscriber<>(POLLUTION_AVERAGE_TOPIC, Config.SERVICE_NAME, new JsonDeserializer<>(PollutionAverage.class));
-    }
-
-    public static IPublisher<PollutionAlert> createAlertPublisher() {
-        return new KafkaPublisher<>(POLLUTION_ALERT_TOPIC, new JsonSerializer<>());
     }
 
     /** @param thresholds the thresholds: each window they have a factor for gets a cooldown */
@@ -85,13 +77,11 @@ public final class Wiring {
 
     public static PollutionAlertService createAlertService(ISubscriber<PollutionData> pollutionSubscriber,
                                                            ISubscriber<PollutionAverage> averageSubscriber,
-                                                           IPublisher<PollutionAlert> alertPublisher,
                                                            IAlertCooldownStore cooldownStore,
                                                            IAlertSender alertSender,
                                                            Thresholds thresholds) {
         ThresholdDetector detector = new ThresholdDetector(
                 thresholds.baselines(), thresholds.windowFactors(), thresholds.readingFactor());
-        return new PollutionAlertService(
-                pollutionSubscriber, averageSubscriber, detector, cooldownStore, alertSender, alertPublisher);
+        return new PollutionAlertService(pollutionSubscriber, averageSubscriber, detector, cooldownStore, alertSender);
     }
 }

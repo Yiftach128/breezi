@@ -5,11 +5,9 @@ import com.pollution.alertservice.config.Wiring;
 import com.pollution.alertservice.persistence.IAlertCooldownStore;
 import com.pollution.alertservice.senders.IAlertSender;
 import com.pollution.common.PollutionLogger;
-import com.pollution.common.entities.PollutionAlert;
 import com.pollution.common.entities.PollutionAverage;
 import com.pollution.common.entities.PollutionData;
 import com.pollution.common.health.IHealthServer;
-import com.pollution.common.pubsub.IPublisher;
 import com.pollution.common.pubsub.ISubscriber;
 import com.pollution.common.thresholds.Thresholds;
 import org.slf4j.Logger;
@@ -33,12 +31,11 @@ public class AlertServiceApplication {
         try {
             ISubscriber<PollutionData> pollutionSubscriber = Wiring.createPollutionSubscriber();
             ISubscriber<PollutionAverage> averageSubscriber = Wiring.createAverageSubscriber();
-            IPublisher<PollutionAlert> alertPublisher = Wiring.createAlertPublisher();
             Thresholds thresholds = Config.getThresholds();
             IAlertCooldownStore cooldownStore = Wiring.createCooldownStore(thresholds);
             IAlertSender alertSender = Wiring.createAlertSender();
             PollutionAlertService service = Wiring.createAlertService(
-                    pollutionSubscriber, averageSubscriber, alertPublisher, cooldownStore, alertSender, thresholds);
+                    pollutionSubscriber, averageSubscriber, cooldownStore, alertSender, thresholds);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 health.markNotReady();
                 service.close();

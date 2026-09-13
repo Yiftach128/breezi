@@ -8,7 +8,6 @@ import com.pollution.common.PollutionLogger;
 import com.pollution.common.entities.PollutionAlert;
 import com.pollution.common.entities.PollutionAverage;
 import com.pollution.common.entities.PollutionData;
-import com.pollution.common.pubsub.IPublisher;
 import com.pollution.common.pubsub.ISubscriber;
 import java.util.Comparator;
 import java.util.Objects;
@@ -19,10 +18,10 @@ import org.slf4j.Logger;
 /**
  * Consumes the streams of {@link PollutionData} readings and
  * {@link PollutionAverage}s, runs each through a {@link ThresholdDetector},
- * and raises every alert it finds: delivers it through the
- * {@link IAlertSender} and publishes it as a {@link PollutionAlert} for
- * whoever stores alerts. The two are independent — a failure of one is
- * logged and does not stop the other.
+ * and raises every alert it finds by delivering it as a {@link PollutionAlert}
+ * through the {@link IAlertSender}; a failed delivery is logged, and the
+ * service's own log of every raised alert is the record whatever the
+ * channel.
  * <p>
  * A series (source, pollutant, window) alerts at most once per its cooldown,
  * tracked in the {@link IAlertCooldownStore}; and while a longer measurement
@@ -33,9 +32,8 @@ import org.slf4j.Logger;
  * hour and the ten minutes exceed at once, the hour's alert goes out and the
  * ten minutes' is dropped as superseded — one post, not two, and the same
  * again each time the hour's cooldown lapses. The cooldown starts after the
- * delivery attempts, whether or not
- * they succeeded — the inputs repeat every few seconds, so retrying a broken
- * channel would only flood it. If the store cannot be read the alert is
+ * delivery attempt, whether or not it succeeded — the inputs repeat every
+ * few seconds, so retrying a broken channel would only flood it. If the store cannot be read the alert is
  * raised anyway: an outage may cause duplicate alerts, never missed ones.
  * <p>
  * Messages arrive on the two subscribers' threads; {@link #lock} serializes
@@ -55,7 +53,6 @@ public class PollutionAlertService implements AutoCloseable {
     private final ThresholdDetector detector;
     private final IAlertCooldownStore cooldownStore;
     private final IAlertSender alertSender;
-    private final IPublisher<PollutionAlert> alertPublisher;
 
     private final Object lock = new Object();
 
@@ -63,14 +60,12 @@ public class PollutionAlertService implements AutoCloseable {
                                  ISubscriber<PollutionAverage> averageSubscriber,
                                  ThresholdDetector detector,
                                  IAlertCooldownStore cooldownStore,
-                                 IAlertSender alertSender,
-                                 IPublisher<PollutionAlert> alertPublisher) {
+                                 IAlertSender alertSender) {
         this.pollutionSubscriber = Objects.requireNonNull(pollutionSubscriber, "pollutionSubscriber");
         this.averageSubscriber = Objects.requireNonNull(averageSubscriber, "averageSubscriber");
         this.detector = Objects.requireNonNull(detector, "detector");
         this.cooldownStore = Objects.requireNonNull(cooldownStore, "cooldownStore");
         this.alertSender = Objects.requireNonNull(alertSender, "alertSender");
-        this.alertPublisher = Objects.requireNonNull(alertPublisher, "alertPublisher");
     }
 
     public void start() {
@@ -104,7 +99,6 @@ public class PollutionAlertService implements AutoCloseable {
                 return;
             }
             send(alert);
-            publish(alert);
             markSent(alert);
         }
         logger.info("raised {}", alert);
@@ -128,14 +122,6 @@ public class PollutionAlertService implements AutoCloseable {
         }
     }
 
-    private void publish(PollutionAlert alert) {
-        try {
-            alertPublisher.send(alert, alert.source());
-        } catch (RuntimeException e) {
-            logger.error("failed to publish {}", alert, e);
-        }
-    }
-
     private void markSent(PollutionAlert alert) {
         try {
             cooldownStore.markSent(alert);
@@ -148,7 +134,6 @@ public class PollutionAlertService implements AutoCloseable {
     public void close() {
         pollutionSubscriber.close();
         averageSubscriber.close();
-        alertPublisher.close();
         cooldownStore.close();
         alertSender.close();
     }

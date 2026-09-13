@@ -17,7 +17,6 @@ import com.pollution.common.entities.PollutionData;
 import com.pollution.common.entities.WindowAverage;
 import com.pollution.common.testing.ManualSubscriber;
 import com.pollution.common.testing.MutableClock;
-import com.pollution.common.testing.RecordingPublisher;
 import com.pollution.persistence.PollutionCacheException;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The alert service alone: readings and averages are delivered into it by
- * hand, and what it sends, publishes and suppresses is asserted. Thresholds
+ * hand, and what it sends and suppresses is asserted. Thresholds
  * are {@link TestThresholds}; every window's cooldown is its own length and
  * a single reading's is ten minutes.
  */
@@ -46,13 +45,12 @@ class PollutionAlertServiceTest {
 
     private final ManualSubscriber<PollutionData> readings = new ManualSubscriber<>();
     private final ManualSubscriber<PollutionAverage> averages = new ManualSubscriber<>();
-    private final RecordingPublisher<PollutionAlert> published = new RecordingPublisher<>();
     private final RecordingAlertSender sender = new RecordingAlertSender();
     private final MutableClock clock = MutableClock.at(T0);
     private final IAlertCooldownStore cooldowns =
             new InMemoryAlertCooldownStore(new AlertCooldowns(Map.of(), READING_COOLDOWN), clock);
-    private final PollutionAlertService service = new PollutionAlertService(
-            readings, averages, TestThresholds.detector(), cooldowns, sender, published);
+    private final PollutionAlertService service =
+            new PollutionAlertService(readings, averages, TestThresholds.detector(), cooldowns, sender);
 
     @BeforeEach
     void start() {
@@ -80,12 +78,10 @@ class PollutionAlertServiceTest {
     }
 
     @Test
-    void aReadingAboveItsThresholdIsSentAndPublished() {
+    void aReadingAboveItsThresholdIsSent() {
         readings.deliver(reading(60));
 
-        PollutionAlert expected = new PollutionAlert(CITY, SOURCE, Pollutant.PM2_5, null, 60, 50, T0);
-        assertEquals(List.of(expected), sender.sent());
-        assertEquals(List.of(new RecordingPublisher.Sent<>(expected, SOURCE)), published.sent());
+        assertEquals(List.of(new PollutionAlert(CITY, SOURCE, Pollutant.PM2_5, null, 60, 50, T0)), sender.sent());
     }
 
     @Test
@@ -93,7 +89,6 @@ class PollutionAlertServiceTest {
         readings.deliver(reading(50));
 
         assertEquals(List.of(), sender.attempted());
-        assertEquals(List.of(), published.sent());
     }
 
     @Test
@@ -101,7 +96,6 @@ class PollutionAlertServiceTest {
         averages.deliver(average(over(TEN_MINUTES, 30), over(HOUR, 30), over(DAY, 26)));
 
         assertEquals(List.of(new PollutionAlert(CITY, SOURCE, Pollutant.PM2_5, DAY, 26, 25, T0)), sender.sent());
-        assertEquals(sender.sent(), published.messages());
     }
 
     @Test
@@ -125,7 +119,6 @@ class PollutionAlertServiceTest {
         averages.deliver(average(over(TEN_MINUTES, 40), over(HOUR, 40), over(DAY, 20)));
 
         assertEquals(List.of(HOUR), windowsOf(sender.sent()));
-        assertEquals(List.of(HOUR), windowsOf(published.messages()));
     }
 
     @Test
@@ -149,7 +142,6 @@ class PollutionAlertServiceTest {
         averages.deliver(average(over(TEN_MINUTES, 40), over(HOUR, 20)));
 
         assertEquals(List.of(HOUR), windowsOf(sender.sent()));
-        assertEquals(List.of(HOUR), windowsOf(published.messages()));
     }
 
     @Test
@@ -181,7 +173,7 @@ class PollutionAlertServiceTest {
     }
 
     @Test
-    void aFailingChannelStillPublishesAndStartsTheCooldown() {
+    void aFailingChannelStillStartsTheCooldown() {
         sender.failWith(new AlertSendException("telegram is down"));
 
         readings.deliver(reading(60));
@@ -189,33 +181,20 @@ class PollutionAlertServiceTest {
 
         assertEquals(1, sender.attempted().size(), "not retried at the rate readings arrive");
         assertEquals(List.of(), sender.sent());
-        assertEquals(1, published.sent().size());
         assertEquals(Set.of(new AlertSeries(SOURCE, Pollutant.PM2_5, null)), cooldowns.coolingDownSeries(SOURCE, Pollutant.PM2_5));
-    }
-
-    @Test
-    void aFailingPublisherStillSendsAndStartsTheCooldown() {
-        published.failWith(new RuntimeException("kafka is down"));
-
-        readings.deliver(reading(60));
-        readings.deliver(reading(61));
-
-        assertEquals(1, sender.sent().size());
-        assertEquals(List.of(), published.sent());
     }
 
     @Test
     void anUnreadableCooldownStoreAlertsAnywayRatherThanMissOne() {
         ManualSubscriber<PollutionData> readings = new ManualSubscriber<>();
         PollutionAlertService service = new PollutionAlertService(readings, new ManualSubscriber<>(),
-                TestThresholds.detector(), new UnreadableCooldownStore(), sender, published);
+                TestThresholds.detector(), new UnreadableCooldownStore(), sender);
         service.start();
 
         readings.deliver(reading(60));
         readings.deliver(reading(61));
 
         assertEquals(2, sender.sent().size());
-        assertEquals(2, published.sent().size());
     }
 
     @Test
@@ -244,7 +223,6 @@ class PollutionAlertServiceTest {
 
         assertTrue(readings.isClosed());
         assertTrue(averages.isClosed());
-        assertTrue(published.isClosed());
         assertTrue(sender.isClosed());
     }
 
