@@ -1,6 +1,6 @@
-# Every push and pull request builds the reactor and runs the unit tests; a push to main
-# then publishes one image per service to GitHub Container Registry.
-# See "Images and CI" in CLAUDE.md.
+# Every push and pull request builds the reactor and runs the unit tests, and validates the Helm
+# chart without a cluster; a push to main then publishes one image per service to GitHub
+# Container Registry. See "Images and CI" in CLAUDE.md.
 name: CI
 
 on:
@@ -39,6 +39,51 @@ jobs:
           name: surefire-reports
           path: '**/target/surefire-reports/'
           if-no-files-found: ignore
+
+  chart:
+    name: Validate the Helm chart
+    runs-on: ubuntu-latest
+    env:
+      CHART: helm/air-pollution-tracker
+      # The two required secrets, as placeholders: the chart's guard only checks that they are
+      # set, and nothing rendered here is applied anywhere.
+      PLACEHOLDER_SECRETS: --set secrets.postgresPassword=x --set secrets.purpleAirApiKeys=x
+      # The Kubernetes version the chart is deployed on (k3s); the schemas are fetched for it.
+      KUBERNETES_VERSION: 1.36.4
+    steps:
+      - uses: actions/checkout@v7
+      # kubeconform checks rendered manifests against the Kubernetes OpenAPI schemas without a
+      # cluster: the stand-in for the server dry run of CLAUDE.md, "Kubernetes". Helm itself is
+      # preinstalled on the runner.
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar xz -C "$RUNNER_TEMP" kubeconform
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Lint
+        run: |
+          helm version --short
+          helm lint --strict $CHART $PLACEHOLDER_SECRETS
+      - name: Render with the defaults and validate against the Kubernetes schema
+        run: helm template air-pollution $CHART $PLACEHOLDER_SECRETS | kubeconform -strict -summary -kubernetes-version $KUBERNETES_VERSION
+      # every optional value set, so the templates' conditional blocks render too
+      - name: Render with every optional value set and validate
+        run: >-
+          helm template air-pollution $CHART $PLACEHOLDER_SECRETS
+          --set 'collector.sensors=308702=Ganei Ayalon'
+          --set secrets.telegramBotToken=x --set secrets.telegramChatId=x
+          --set apiService.service.type=NodePort
+          | kubeconform -strict -summary -kubernetes-version $KUBERNETES_VERSION
+      # each guard alone: the other secret set, the one under test missing
+      - name: A missing required secret fails the render, naming it
+        run: |
+          must_fail_naming() {
+            if helm template air-pollution $CHART "${@:2}" >/dev/null 2>render.err; then
+              echo "rendered without $1"; exit 1
+            fi
+            grep "$1 is required" render.err
+          }
+          must_fail_naming secrets.postgresPassword --set secrets.purpleAirApiKeys=x
+          must_fail_naming secrets.purpleAirApiKeys --set secrets.postgresPassword=x
 
   images:
     name: Publish ${{ matrix.service }}
