@@ -1,0 +1,52 @@
+# The collector: any number of replicas. The instances find each other through Redis and share
+# the sensors out by rank, so scaling this Deployment (or a pod dying) is followed by a reshare
+# within a heartbeat. COLLECTOR_ID is left to its default, <hostname>-<pid>: the pod name and
+# the container pid, the same again after a container restart.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pollution-data-collector
+  labels:
+    app.kubernetes.io/name: pollution-data-collector
+    {{- include "apt.commonLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.collector.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pollution-data-collector
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pollution-data-collector
+        {{- include "apt.commonLabels" . | nindent 8 }}
+      annotations:
+        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+    spec:
+      # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
+      # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
+      # (likewise REDIS_PORT and POSTGRES_PORT). DNS by Service name is all they need.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: collector
+          image: {{ .Values.image.repository }}/pollution-data-collector:{{ .Values.image.tag }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.healthPort }}
+          envFrom:
+            - configMapRef:
+                name: pollution-config
+          env:
+            - name: PURPLEAIR_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: pollution-secrets
+                  key: PURPLEAIR_API_KEYS
+            {{- with .Values.collector.sensors }}
+            - name: PURPLEAIR_SENSORS
+              value: {{ . | quote }}
+            {{- end }}
+          {{- include "apt.healthProbes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.collector.resources | nindent 12 }}

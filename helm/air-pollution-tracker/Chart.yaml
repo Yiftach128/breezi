@@ -1,0 +1,9 @@
+apiVersion: v2
+name: air-pollution-tracker
+description: >-
+  The air pollution tracker on Kubernetes: the five services and the stores they need
+  (Kafka, Redis, PostgreSQL), each a plain Deployment. Meant for one release per namespace:
+  resource names are fixed rather than prefixed by the release name, so the stores answer to
+  their plain names (kafka, redis, postgres) inside the namespace.
+type: application
+version: 0.1.0

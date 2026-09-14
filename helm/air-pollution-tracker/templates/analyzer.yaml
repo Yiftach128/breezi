@@ -1,0 +1,43 @@
+# The analyzer: ONE instance, by decision. Its per-series state is loaded from Redis once at
+# startup and would go stale if a partition moved between instances, so the replica count is
+# fixed here and the Recreate strategy makes sure an update never runs two.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pollution-data-analyzer
+  labels:
+    app.kubernetes.io/name: pollution-data-analyzer
+    {{- include "apt.commonLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pollution-data-analyzer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pollution-data-analyzer
+        {{- include "apt.commonLabels" . | nindent 8 }}
+      annotations:
+        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+    spec:
+      # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
+      # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
+      # (likewise REDIS_PORT and POSTGRES_PORT). DNS by Service name is all they need.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: analyzer
+          image: {{ .Values.image.repository }}/pollution-data-analyzer:{{ .Values.image.tag }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.healthPort }}
+          envFrom:
+            - configMapRef:
+                name: pollution-config
+          {{- include "apt.healthProbes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.analyzer.resources | nindent 12 }}

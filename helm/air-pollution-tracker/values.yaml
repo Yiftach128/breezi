@@ -1,0 +1,110 @@
+# Settings of the air-pollution-tracker chart. Secrets are not here: see values-secrets.example.yaml.
+
+image:
+  # Every service image is <repository>/<module>:<tag>, as CI pushes them.
+  repository: ghcr.io/yiftach128
+  # One tag for all five services, since one commit builds all five. "latest" is the newest
+  # build of main; a deployment of a known commit passes its immutable tag instead:
+  #   helm upgrade ... --set image.tag=sha-<short commit>
+  # That changes the pod templates, so Kubernetes rolls the pods out and the running commit
+  # is visible on every pod. With "latest" nothing changes on upgrade: the pods must be
+  # restarted by hand (kubectl rollout restart deployment ...) and pull whatever is newest.
+  # No imagePullPolicy is set: Kubernetes itself pulls "latest" on every pod start and any
+  # other tag only when the node does not have it yet.
+  tag: latest
+
+# The port every service health server listens on (HEALTH_PORT); each pod has its own IP,
+# so all services can share the number. The probes use it.
+healthPort: 8081
+
+# ---- the services ---------------------------------------------------------------------
+# Memory limits size the JVM heap (the image runs with -XX:MaxRAMPercentage=75). CPU has
+# requests only: a CPU limit would throttle a JVM for no gain on a single node.
+
+collector:
+  # Any number: the instances find each other through Redis and share the sensors out
+  # (more replicas than sensors is allowed, the extra ones idle).
+  replicas: 2
+  # PURPLEAIR_SENSORS, the whole list for every instance, comma-separated <sensor_index>=<city>.
+  # Empty: the two sensors compiled into the collector.
+  sensors: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+writer:
+  # Replicable (the repository is idempotent, the latest-reading store never goes backwards),
+  # but every topic has one partition today, so a second instance would idle.
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+# The analyzer and the alert service run as ONE instance each, by decision (their in-memory
+# state and cooldown check-then-mark are correct only within one JVM), so they have no replica
+# setting: the templates fix 1 with a Recreate strategy.
+analyzer:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+alertService:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+apiService:
+  replicas: 1
+  service:
+    # How the dashboard leaves the cluster. LoadBalancer: on k3s, ServiceLB takes .port on the
+    # host itself, so the dashboard is at http://localhost:<port>/ (the port must be free on
+    # the host). NodePort: the dashboard is at a node port from the 30000-32767 range instead.
+    type: LoadBalancer
+    port: 8080
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+# ---- the stores ------------------------------------------------------------------------
+# Single-instance each, with a Recreate strategy: two instances of a store must never run at
+# once, and a read-write-once volume could not be mounted by both anyway. Kafka and Postgres
+# keep their data on a PersistentVolumeClaim (the default StorageClass; on k3s, local-path)
+# which survives helm uninstall (a "keep" resource policy); delete the claim to start over.
+# Redis has no volume: every key it holds has a TTL, so a restart costs one TTL of state.
+
+kafka:
+  image: apache/kafka:3.9.1
+  # The KRaft cluster id the storage is formatted with on first start; fixed here so a
+  # re-created pod meets a volume formatted under the same id. Any 22-character id from
+  # "kafka-storage.sh random-uuid" will do; there is no reason to change it.
+  clusterId: _71Lqa2pRtmqc-3W6xQEdQ
+  storage: 2Gi
+  # The broker heap; must fit well inside the memory limit together with the off-heap use.
+  heapOpts: -Xmx512m -Xms256m
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 1Gi }
+
+redis:
+  image: redis:8
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+postgres:
+  image: postgres:17
+  # Created on first start (with secrets.postgresPassword) and handed to the writer and the
+  # API service as POSTGRES_DB / POSTGRES_USER.
+  database: pollution
+  user: pollution
+  storage: 2Gi
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { memory: 512Mi }
+
+# Filled in from values-secrets.yaml; see values-secrets.example.yaml.
+secrets:
+  postgresPassword: ""
+  purpleAirApiKeys: ""
+  telegramBotToken: ""
+  telegramChatId: ""

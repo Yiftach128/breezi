@@ -1,0 +1,2 @@
+# never package the local secrets file
+values-secrets.yaml

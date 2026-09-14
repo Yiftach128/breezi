@@ -1,0 +1,45 @@
+# The writer: readings to Postgres (the history) and to Redis (the current reading of each series).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pollution-data-writer
+  labels:
+    app.kubernetes.io/name: pollution-data-writer
+    {{- include "apt.commonLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.writer.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pollution-data-writer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pollution-data-writer
+        {{- include "apt.commonLabels" . | nindent 8 }}
+      annotations:
+        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+    spec:
+      # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
+      # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
+      # (likewise REDIS_PORT and POSTGRES_PORT). DNS by Service name is all they need.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: writer
+          image: {{ .Values.image.repository }}/pollution-data-writer:{{ .Values.image.tag }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.healthPort }}
+          envFrom:
+            - configMapRef:
+                name: pollution-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pollution-secrets
+                  key: POSTGRES_PASSWORD
+          {{- include "apt.healthProbes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.writer.resources | nindent 12 }}

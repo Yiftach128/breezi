@@ -1,0 +1,21 @@
+{{ .Chart.Name }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Watch it come up (Kafka and Postgres first, then the services turn Ready):
+  kubectl -n {{ .Release.Namespace }} get pods -w
+
+{{- if eq .Values.apiService.service.type "LoadBalancer" }}
+
+Dashboard: http://localhost:{{ .Values.apiService.service.port }}/
+From a browser outside the node (a Windows browser, for the WSL k3s): use the EXTERNAL-IP the Service shows instead of localhost:
+  kubectl -n {{ .Release.Namespace }} get svc pollution-api-service
+(ServiceLB holds that port on the host; "kubectl -n {{ .Release.Namespace }} get svc pollution-api-service" shows it pending while the port is taken.)
+{{- else if eq .Values.apiService.service.type "NodePort" }}
+
+Dashboard: http://localhost:<node port>/ where the node port is
+  kubectl -n {{ .Release.Namespace }} get svc pollution-api-service -o jsonpath="{.spec.ports[0].nodePort}"
+{{- else }}
+
+Dashboard (cluster-internal Service): kubectl -n {{ .Release.Namespace }} port-forward svc/pollution-api-service {{ .Values.apiService.service.port }}:{{ .Values.apiService.service.port }}
+{{- end }}
+
+Logs: kubectl -n {{ .Release.Namespace }} logs deployment/<service> -f

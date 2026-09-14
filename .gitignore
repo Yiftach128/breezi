@@ -8,3 +8,6 @@ data-example.json
 
 # local settings and secrets (Telegram bot token, ...); see .env.example
 .env
+
+# the Helm chart's local secrets (Postgres password, PurpleAir keys, Telegram); see helm/air-pollution-tracker/values-secrets.example.yaml
+helm/**/values-secrets.yaml

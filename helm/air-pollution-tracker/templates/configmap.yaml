@@ -1,0 +1,17 @@
+# The settings every service shares: where the stores are (the Services below, by name) and
+# the health port. Each service Deployment takes the whole map with envFrom; a service reads
+# only the variables it knows and ignores the rest.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pollution-config
+  labels:
+    app.kubernetes.io/name: pollution-config
+    {{- include "apt.commonLabels" . | nindent 4 }}
+data:
+  KAFKA_HOST: kafka
+  REDIS_HOST: redis
+  POSTGRES_HOST: postgres
+  POSTGRES_DB: {{ .Values.postgres.database | quote }}
+  POSTGRES_USER: {{ .Values.postgres.user | quote }}
+  HEALTH_PORT: {{ .Values.healthPort | quote }}

@@ -1,0 +1,56 @@
+# The alert service: ONE instance, by decision. Its cooldown check-then-mark is atomic only
+# within one JVM, so the replica count is fixed here with a Recreate strategy. The Telegram
+# keys are optional: without both, the service only logs its alerts.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pollution-alert-service
+  labels:
+    app.kubernetes.io/name: pollution-alert-service
+    {{- include "apt.commonLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pollution-alert-service
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pollution-alert-service
+        {{- include "apt.commonLabels" . | nindent 8 }}
+      annotations:
+        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+    spec:
+      # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
+      # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
+      # (likewise REDIS_PORT and POSTGRES_PORT). DNS by Service name is all they need.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: alert-service
+          image: {{ .Values.image.repository }}/pollution-alert-service:{{ .Values.image.tag }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.healthPort }}
+          envFrom:
+            - configMapRef:
+                name: pollution-config
+          env:
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pollution-secrets
+                  key: TELEGRAM_BOT_TOKEN
+                  optional: true
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pollution-secrets
+                  key: TELEGRAM_CHAT_ID
+                  optional: true
+          {{- include "apt.healthProbes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.alertService.resources | nindent 12 }}
