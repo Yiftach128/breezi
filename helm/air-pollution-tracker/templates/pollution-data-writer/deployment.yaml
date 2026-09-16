@@ -26,7 +26,7 @@ spec:
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       containers:
-        - name: writer
+        - name: pollution-data-writer
           image: {{ .Values.image.repository }}/pollution-data-writer:{{ .Values.image.tag }}
           ports:
             - name: health

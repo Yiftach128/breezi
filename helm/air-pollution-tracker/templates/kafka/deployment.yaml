@@ -4,39 +4,6 @@
 # is the name of this Service. The log lives on a claim and is formatted with a fixed cluster
 # id on first start. The apache/kafka image runs as uid 1000; local-path creates its volume
 # directory world-writable, so no ownership setup is needed.
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kafka-data
-  labels:
-    app.kubernetes.io/name: kafka
-    {{- include "apt.commonLabels" . | nindent 4 }}
-  annotations:
-    helm.sh/resource-policy: keep
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: {{ .Values.kafka.storage }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka
-  labels:
-    app.kubernetes.io/name: kafka
-    {{- include "apt.commonLabels" . | nindent 4 }}
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: kafka
-    app.kubernetes.io/instance: {{ .Release.Name }}
-  ports:
-    - name: kafka
-      port: 9092
-      targetPort: kafka
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

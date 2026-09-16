@@ -1,39 +1,6 @@
 # PostgreSQL: the history of readings. The database and user are created on first start from
 # the values and the password in the Secret; the writer creates the table (Hibernate). The
 # data lives on a claim that survives helm uninstall.
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-data
-  labels:
-    app.kubernetes.io/name: postgres
-    {{- include "apt.commonLabels" . | nindent 4 }}
-  annotations:
-    helm.sh/resource-policy: keep
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: {{ .Values.postgres.storage }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  labels:
-    app.kubernetes.io/name: postgres
-    {{- include "apt.commonLabels" . | nindent 4 }}
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: postgres
-    app.kubernetes.io/instance: {{ .Release.Name }}
-  ports:
-    - name: postgres
-      port: 5432
-      targetPort: postgres
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -80,7 +47,12 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", {{ .Values.postgres.user | quote }}, "-d", {{ .Values.postgres.database | quote }}]
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.user | quote }}
+                - -d
+                - {{ .Values.postgres.database | quote }}
             periodSeconds: 5
           resources:
             {{- toYaml .Values.postgres.resources | nindent 12 }}

@@ -1,4 +1,4 @@
-# Settings of the air-pollution-tracker chart. Secrets are not here: see values-secrets.example.yaml.
+ok.# Settings of the air-pollution-tracker chart. Secrets are not here: see values-secrets.example.yaml.
 
 image:
   # Every service image is <repository>/<module>:<tag>, as CI pushes them.
@@ -29,29 +29,41 @@ collector:
   # Empty: the two sensors compiled into the collector.
   sensors: ""
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 writer:
   # Replicable (the repository is idempotent, the latest-reading store never goes backwards),
   # but every topic has one partition today, so a second instance would idle.
   replicas: 1
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 # The analyzer and the alert service run as ONE instance each, by decision (their in-memory
 # state and cooldown check-then-mark are correct only within one JVM), so they have no replica
 # setting: the templates fix 1 with a Recreate strategy.
 analyzer:
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 alertService:
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 apiService:
   replicas: 1
@@ -62,8 +74,11 @@ apiService:
     type: LoadBalancer
     port: 8080
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 # ---- the stores ------------------------------------------------------------------------
 # Single-instance each, with a Recreate strategy: two instances of a store must never run at
@@ -82,14 +97,20 @@ kafka:
   # The broker heap; must fit well inside the memory limit together with the off-heap use.
   heapOpts: -Xmx512m -Xms256m
   resources:
-    requests: { cpu: 250m, memory: 512Mi }
-    limits: { memory: 1Gi }
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
 
 redis:
   image: redis:8
   resources:
-    requests: { cpu: 50m, memory: 64Mi }
-    limits: { memory: 256Mi }
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
 
 postgres:
   image: postgres:17
@@ -99,8 +120,11 @@ postgres:
   user: pollution
   storage: 2Gi
   resources:
-    requests: { cpu: 100m, memory: 128Mi }
-    limits: { memory: 512Mi }
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
 
 # Filled in from values-secrets.yaml; see values-secrets.example.yaml.
 secrets:

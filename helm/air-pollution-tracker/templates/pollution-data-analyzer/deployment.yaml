@@ -30,7 +30,7 @@ spec:
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       containers:
-        - name: analyzer
+        - name: pollution-data-analyzer
           image: {{ .Values.image.repository }}/pollution-data-analyzer:{{ .Values.image.tag }}
           ports:
             - name: health
