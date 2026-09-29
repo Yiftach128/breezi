@@ -4,7 +4,7 @@ metadata:
   name: kafka
   labels:
     app.kubernetes.io/name: kafka
-    {{- include "apt.commonLabels" . | nindent 4 }}
+    {{- include "breezi.commonLabels" . | nindent 4 }}
 spec:
   type: ClusterIP
   selector:

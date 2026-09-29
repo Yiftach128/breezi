@@ -44,7 +44,7 @@ jobs:
     name: Validate the Helm chart
     runs-on: ubuntu-latest
     env:
-      CHART: helm/air-pollution-tracker
+      CHART: helm/breezi
       # The two required secrets, as placeholders: the chart's guard only checks that they are
       # set, and nothing rendered here is applied anywhere.
       PLACEHOLDER_SECRETS: --set secrets.postgresPassword=x --set secrets.purpleAirApiKeys=x

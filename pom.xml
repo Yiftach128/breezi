@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.pollution</groupId>
-    <artifactId>air-pollution-tracker</artifactId>
+    <artifactId>breezi</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>air-pollution-tracker</name>
-    <description>Polluted-air microservices</description>
+    <name>breezi</name>
+    <description>Breezi: a microservices-based air quality monitoring platform</description>
 
     <modules>
         <module>pollution-common</module>

@@ -5,7 +5,7 @@ metadata:
   name: pollution-data-writer
   labels:
     app.kubernetes.io/name: pollution-data-writer
-    {{- include "apt.commonLabels" . | nindent 4 }}
+    {{- include "breezi.commonLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.writer.replicas }}
   selector:
@@ -16,9 +16,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: pollution-data-writer
-        {{- include "apt.commonLabels" . | nindent 8 }}
+        {{- include "breezi.commonLabels" . | nindent 8 }}
       annotations:
-        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+        {{- include "breezi.checksumAnnotations" . | nindent 8 }}
     spec:
       # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
       # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
@@ -40,6 +40,6 @@ spec:
                 secretKeyRef:
                   name: pollution-secrets
                   key: POSTGRES_PASSWORD
-          {{- include "apt.healthProbes" . | nindent 10 }}
+          {{- include "breezi.healthProbes" . | nindent 10 }}
           resources:
             {{- toYaml .Values.writer.resources | nindent 12 }}

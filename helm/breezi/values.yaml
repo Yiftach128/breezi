@@ -1,4 +1,4 @@
-ok.# Settings of the air-pollution-tracker chart. Secrets are not here: see values-secrets.example.yaml.
+# Settings of the breezi chart. Secrets are not here: see values-secrets.example.yaml.
 
 image:
   # Every service image is <repository>/<module>:<tag>, as CI pushes them.

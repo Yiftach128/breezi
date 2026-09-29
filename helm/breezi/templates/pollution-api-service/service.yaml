@@ -4,7 +4,7 @@ metadata:
   name: pollution-api-service
   labels:
     app.kubernetes.io/name: pollution-api-service
-    {{- include "apt.commonLabels" . | nindent 4 }}
+    {{- include "breezi.commonLabels" . | nindent 4 }}
 spec:
   type: {{ .Values.apiService.service.type }}
   selector:

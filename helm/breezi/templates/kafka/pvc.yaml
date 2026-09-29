@@ -5,7 +5,7 @@ metadata:
   name: kafka-data
   labels:
     app.kubernetes.io/name: kafka
-    {{- include "apt.commonLabels" . | nindent 4 }}
+    {{- include "breezi.commonLabels" . | nindent 4 }}
   annotations:
     helm.sh/resource-policy: keep
 spec:

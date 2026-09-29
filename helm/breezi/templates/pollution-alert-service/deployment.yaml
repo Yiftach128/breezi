@@ -7,7 +7,7 @@ metadata:
   name: pollution-alert-service
   labels:
     app.kubernetes.io/name: pollution-alert-service
-    {{- include "apt.commonLabels" . | nindent 4 }}
+    {{- include "breezi.commonLabels" . | nindent 4 }}
 spec:
   replicas: 1
   strategy:
@@ -20,9 +20,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: pollution-alert-service
-        {{- include "apt.commonLabels" . | nindent 8 }}
+        {{- include "breezi.commonLabels" . | nindent 8 }}
       annotations:
-        {{- include "apt.checksumAnnotations" . | nindent 8 }}
+        {{- include "breezi.checksumAnnotations" . | nindent 8 }}
     spec:
       # No Docker-link variables for the Services in the namespace: with them, a Service named kafka
       # gives every pod KAFKA_PORT=tcp://<ip>:9092, shadowing the numeric KAFKA_PORT the services read
@@ -51,6 +51,6 @@ spec:
                   name: pollution-secrets
                   key: TELEGRAM_CHAT_ID
                   optional: true
-          {{- include "apt.healthProbes" . | nindent 10 }}
+          {{- include "breezi.healthProbes" . | nindent 10 }}
           resources:
             {{- toYaml .Values.alertService.resources | nindent 12 }}

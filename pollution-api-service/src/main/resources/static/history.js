@@ -56,7 +56,7 @@ function renderSource(status) {
     return;
   }
   slot.append(sourceCard(status, {link: false}));
-  document.title = `${status.sensor} — Air pollution tracker`;
+  document.title = `${status.sensor} — Breezi`;
 }
 
 /* ---- the controls' state, kept in the URL ------------------------------ */

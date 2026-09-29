@@ -1,6 +1,11 @@
-# Air Pollution Tracker
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="pollution-api-service/src/main/resources/static/logo.svg">
+    <img src="public/logo-light.svg" width="240" alt="Breezi">
+  </picture>
+</p>
 
-[![CI](https://github.com/Yiftach128/air-pollution-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Yiftach128/air-pollution-tracker/actions/workflows/ci.yml)
+[![CI](https://github.com/Yiftach128/breezi/actions/workflows/ci.yml/badge.svg)](https://github.com/Yiftach128/breezi/actions/workflows/ci.yml)
 ![Java 17](https://img.shields.io/badge/Java-17-blue)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.9-black)
 ![Redis](https://img.shields.io/badge/Redis-8-red)
@@ -8,7 +13,7 @@
 ![Grafana](https://img.shields.io/badge/Grafana-Loki-F46800)
 ![Kubernetes-ready](https://img.shields.io/badge/Kubernetes-Helm-326CE5)
 
-Real-time air-quality monitoring around real PurpleAir sensors: a live dashboard of every sensor's current readings, the history of each one against health thresholds, and a Telegram alert when a reading or a rolling average crosses one.
+Breezi is a microservices-based air quality monitoring platform, featuring: a live dashboard of every sensor's current readings (real PurpleAir sensors), historical view of sensors data, and a Telegram alert push (when thresholds are crossed).
 
 It is built as **five Java microservices** around **Kafka**, **Redis** and **PostgreSQL**: every reading streams through Kafka, rolling averages are kept per sensor, alerts go out with cooldowns, the history goes to PostgreSQL. Every service ships as its own container image and runs unchanged on Kubernetes, and the logs of all of them are collected into **Grafana** through Loki.
 
@@ -171,8 +176,8 @@ Dockerfile                 one build for all five images
 ### Install
 
 ```sh
-git clone https://github.com/Yiftach128/air-pollution-tracker.git
-cd air-pollution-tracker
+git clone https://github.com/Yiftach128/breezi.git
+cd breezi
 mvn -DskipTests package    # or `mvn verify` to run the tests first
 ```
 
@@ -218,12 +223,12 @@ Then open **http://127.0.0.1:8080/**. Topics and the table are created on first 
 
 ## Deploy on Kubernetes
 
-`helm/air-pollution-tracker` deploys the whole system into one namespace as plain Kubernetes YAML: a `Deployment` per service and per store — Kafka (one KRaft broker), Redis and PostgreSQL. Developed on a single-node k3s.
+`helm/breezi` deploys the whole system into one namespace as plain Kubernetes YAML: a `Deployment` per service and per store — Kafka (one KRaft broker), Redis and PostgreSQL. Developed on a single-node k3s.
 
 ```sh
-cp helm/air-pollution-tracker/values-secrets.example.yaml helm/air-pollution-tracker/values-secrets.yaml   # fill in
-helm upgrade --install air-pollution helm/air-pollution-tracker -n air-pollution --create-namespace \
-  -f helm/air-pollution-tracker/values-secrets.yaml
+cp helm/breezi/values-secrets.example.yaml helm/breezi/values-secrets.yaml   # fill in
+helm upgrade --install air-pollution helm/breezi -n air-pollution --create-namespace \
+  -f helm/breezi/values-secrets.yaml
 kubectl -n air-pollution get pods -w
 ```
 
