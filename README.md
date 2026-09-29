@@ -1,7 +1,7 @@
 <p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="pollution-api-service/src/main/resources/static/logo.svg">
-    <img src="public/logo-light.svg" width="240" alt="Breezi">
+    <img src="public/logo-light.svg" width="144" alt="Breezi">
   </picture>
 </p>
 
@@ -19,14 +19,14 @@ It is built as **five Java microservices** around **Kafka**, **Redis** and **Pos
 
 **Overview — one card per sensor with its current readings**
 
-<p align="center">
-  <img src="public/screenshots/sensors-page.jpg" width="90%" alt="Overview: one card per sensor with its current readings">
+<p align="left">
+  <img src="public/screenshots/sensors-page.jpg" width="80%" alt="Overview: one card per sensor with its current readings">
 </p>
 
 **History — a sensor's historical data, shown against the threshold line**
 
-<p align="center">
-  <img src="public/screenshots/sensor-history.jpg" width="90%" alt="History: one sensor's averages against the threshold line">
+<p align="left">
+  <img src="public/screenshots/sensor-history.jpg" width="80%" alt="History: one sensor's averages against the threshold line">
 </p>
 
 **Telegram — a PM2.5 alert as posted to the channel**
@@ -235,7 +235,7 @@ kubectl -n air-pollution get pods -w
 - **Data survives.** Kafka and PostgreSQL keep their data on volumes that survive `helm uninstall`; Redis needs none: every key has a TTL.
 - **Configuration.** A `ConfigMap` hands every pod the stores' addresses and the health port, a `Secret` the password and API keys from a git-ignored values file. A checksum annotation rolls the pods when only the configuration changed.
 - **Probes.** Every pod answers liveness on `/healthz` and readiness on `/readyz`, on a port of its own. Ready means started (state restored, subscribed), not that the stores are reachable, so a store outage does not cascade into every pod being marked unready.
-- **Dashboard.** The API service is the one `Service` reachable from outside: `LoadBalancer` on port 8080 by default, so on k3s <http://localhost:8080/>; `NodePort` is the alternative (`apiService.service.type`).
+- **Dashboard.** The API service is the one `Service` reachable from outside: `LoadBalancer` on port 8080 by default, so on k3s <http://localhost:8080/>; `NodePort` is the alternative (`apiService.service.type`). From outside the node (e.g. Windows beside a WSL k3s), use the Service's `EXTERNAL-IP` instead of `localhost`.
 - **Deploy a commit.** CI pushes every service's image to GHCR tagged `sha-<short commit>`; `--set image.tag=sha-<short commit>` changes the pod templates and rolls them out. With `latest` nothing changes on upgrade, so use `kubectl rollout restart` instead.
 - **Scale.** `kubectl -n air-pollution scale deployment/pollution-data-collector --replicas=3` reshares the sensors within a heartbeat; the writer and the API service scale through `writer.replicas` and `apiService.replicas`; the analyzer and the alert service have no replica value and run as one instance with `Recreate`.
 - **Logs.** `kubectl -n air-pollution logs deployment/<service> -f`.

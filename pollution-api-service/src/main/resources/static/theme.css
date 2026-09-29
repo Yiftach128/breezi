@@ -36,13 +36,10 @@
   --error-text: #ffb3bf;
   --error-border: rgba(255, 120, 140, 0.35);
 
-  /* one colour per pollutant, kept everywhere it appears: tile, swatch, line, band */
-  --pm2_5: #6db8ff;
-  --pm10: #ff9457;
-  --no2: #45d39a;
-  --o3: #ffc94d;
-  --so2: #ff86bd;
-  --co: #b39cff;
+  /* a reading, whatever the pollutant: swatch, line, band. One colour for all of them, so
+     the only colour that says anything about a value is --exceed; which pollutant it is,
+     the label says */
+  --reading: #6db8ff;
 
   /* shape and type */
   --radius: 12px;

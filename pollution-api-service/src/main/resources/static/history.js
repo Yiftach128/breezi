@@ -4,7 +4,7 @@
 
 import {
   $, DAY_MS, HOUR_MS, REFRESH_INTERVAL_MS, addDays, api, clear, dayFormat, dayTimeFormat, el, formatDateTime,
-  formatLocalDay, formatValue, hideError, loadPollutants, parseLocalDay, pollutantColor,
+  formatLocalDay, formatValue, hideError, loadPollutants, parseLocalDay,
   pollutantLabel, pollutantThreshold, pollutantUnit, showError, sourceCard, timeFormat, updateRelativeTimes,
 } from './common.js';
 
@@ -190,7 +190,7 @@ function renderHistory(data) {
       el('div', {className: 'chart-title'}, el('h3', {className: 'muted'}, 'no readings in this range')),
       el('div', {className: 'chart-box'}, canvas),
     ]));
-    charts.push(makeChart(canvas, [], pollutantColor(null), fromMs, toMs, ''));
+    charts.push(makeChart(canvas, [], fromMs, toMs, ''));
     return;
   }
 
@@ -198,18 +198,17 @@ function renderHistory(data) {
     const points = data.points.filter(p => p.pollutant === name);
     const summary = data.summary.find(s => s.pollutant === name);
     const threshold = pollutantThreshold(name, data.bucket); // of averages this long, which the chart shows
-    const color = pollutantColor(name);
     const canvas = el('canvas');
     const card = el('div', {className: 'chart-card'}, [
       el('div', {className: 'chart-title'}, [
-        el('span', {className: 'swatch', style: `background:${color}`}),
+        el('span', {className: 'swatch'}),
         el('h3', {}, [pollutantLabel(name), ' ', el('span', {className: 'unit'}, pollutantUnit(name))]),
       ]),
       summaryLine(summary),
       el('div', {className: 'chart-box'}, canvas),
     ]);
     container.append(card);
-    charts.push(makeChart(canvas, points, color, fromMs, toMs, pollutantUnit(name), threshold));
+    charts.push(makeChart(canvas, points, fromMs, toMs, pollutantUnit(name), threshold));
   }
 }
 
@@ -223,10 +222,11 @@ function summaryLine(summary) {
   ]);
 }
 
-function makeChart(canvas, points, color, fromMs, toMs, unit, threshold) {
+function makeChart(canvas, points, fromMs, toMs, unit, threshold) {
   const style = getComputedStyle(document.documentElement);
   const inkMuted = style.getPropertyValue('--muted').trim();
   const grid = style.getPropertyValue('--grid').trim();
+  const color = style.getPropertyValue('--reading').trim(); // the same for every pollutant
   const exceed = style.getPropertyValue('--exceed').trim();
   const above = value => threshold !== undefined && value > threshold;
   const dense = points.length > 400;
@@ -252,9 +252,10 @@ function makeChart(canvas, points, color, fromMs, toMs, unit, threshold) {
       {label: 'min', data: toXY('min'), borderWidth: 0, pointRadius: 0, pointHoverRadius: 0},
   );
   if (threshold !== undefined) {
-    /* the threshold of averages this long, dashed and level across the range */
+    /* the threshold of averages this long, dashed and level across the range; at a width
+       of 1 it falls between two rows of pixels on some charts and comes out pale */
     datasets.push({label: 'threshold', data: [{x: fromMs, y: threshold}, {x: toMs, y: threshold}],
-      borderColor: exceed, borderDash: [6, 4], borderWidth: 1, pointRadius: 0, pointHoverRadius: 0});
+      borderColor: exceed, borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0});
   }
   const spanMs = toMs - fromMs;
   const tickFormat = spanMs <= 2 * DAY_MS ? timeFormat : spanMs <= 8 * DAY_MS ? dayTimeFormat : dayFormat;

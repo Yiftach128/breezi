@@ -5,11 +5,6 @@ export const REFRESH_INTERVAL_MS = 60_000;
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
 
-/* colour per pollutant (a token of theme.css), fixed so a pollutant keeps its colour everywhere */
-const COLOR_VARIABLE_BY_POLLUTANT = {
-  PM2_5: '--pm2_5', PM10: '--pm10', NO2: '--no2', O3: '--o3', SO2: '--so2', CO: '--co',
-};
-
 export const pollutants = new Map(); // name -> {displayName, unit, thresholds}, in the service's order
 
 export const $ = id => document.getElementById(id);
@@ -128,13 +123,6 @@ export function pollutantThreshold(name, measurement) {
   return pollutants.get(name)?.thresholds?.[measurement];
 }
 
-export function pollutantColor(name) {
-  const variable = COLOR_VARIABLE_BY_POLLUTANT[name];
-  const style = getComputedStyle(document.documentElement);
-  const color = variable ? style.getPropertyValue(variable).trim() : '';
-  return color || style.getPropertyValue('--muted').trim();
-}
-
 /* ---- API --------------------------------------------------------------- */
 
 export async function api(path) {
@@ -165,8 +153,9 @@ export function historyUrl(source) {
 }
 
 /**
- * The card of one source (a SourceStatus): who it is, what it reads right
- * now and when it last reported. A link to its history unless told otherwise.
+ * The card of one source (a SourceStatus), in the order it is read: what it
+ * reads right now, who it is and when it last reported. A link to its history
+ * unless told otherwise.
  */
 export function sourceCard(status, {link = true} = {}) {
   const stale = status.currentReadings.length === 0;
@@ -174,15 +163,6 @@ export function sourceCard(status, {link = true} = {}) {
     className: `source-card${stale ? ' stale' : ''}`,
     ...(link ? {href: historyUrl(status.source)} : {}),
   });
-
-  /* each value is one row, cut with an ellipsis when too long; the title carries it whole */
-  const identity = el('dl', {className: 'card-id'});
-  identity.append(el('dt', {}, 'sensor'), el('dd', {className: 'sensor', title: status.sensor}, status.sensor));
-  if (status.provider !== null) {
-    identity.append(el('dt', {}, 'provider'), el('dd', {className: 'provider', title: status.provider}, status.provider));
-  }
-  identity.append(el('dt', {}, 'city'), el('dd', {className: 'city', title: status.city}, status.city));
-  card.append(identity);
 
   if (stale) {
     card.append(el('p', {className: 'no-readings'}, 'no current reading'));
@@ -193,7 +173,6 @@ export function sourceCard(status, {link = true} = {}) {
       const exceeding = threshold !== undefined && reading.value > threshold;
       tiles.append(el('div', {
         className: `tile${exceeding ? ' exceeding' : ''}`,
-        style: `--pollutant: ${pollutantColor(reading.pollutant)}`,
         title: `at ${formatDateTime(Date.parse(reading.timestamp))}`
             + (exceeding ? ` — above the 1-hour threshold of ${formatValue(threshold)}` : ''),
       }, [
@@ -205,6 +184,15 @@ export function sourceCard(status, {link = true} = {}) {
     }
     card.append(tiles);
   }
+
+  /* each value is one row, cut with an ellipsis when too long; the title carries it whole */
+  const identity = el('dl', {className: 'card-id'});
+  identity.append(el('dt', {}, 'sensor'), el('dd', {className: 'sensor', title: status.sensor}, status.sensor));
+  if (status.provider !== null) {
+    identity.append(el('dt', {}, 'provider'), el('dd', {className: 'provider', title: status.provider}, status.provider));
+  }
+  identity.append(el('dt', {}, 'city'), el('dd', {className: 'city', title: status.city}, status.city));
+  card.append(identity);
 
   const lastMs = Date.parse(status.lastReportedAt);
   const reported = el('span', {className: 'reported', title: Number.isNaN(lastMs) ? '' : formatDateTime(lastMs)}, [

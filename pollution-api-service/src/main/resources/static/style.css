@@ -9,10 +9,11 @@ html {
   background: var(--page);
 }
 
+/* the content runs the window's width, less a gutter each side that grows with it */
 body {
-  margin: 0 auto;
-  max-width: 1280px;
-  padding: 0 1.5rem 3rem;
+  --gutter: clamp(1rem, 2.5vw, 3rem);
+  margin: 0;
+  padding: 0 var(--gutter) 3rem;
   background: var(--page);
   color: var(--text);
   font: 14px/1.5 var(--font);
@@ -69,14 +70,17 @@ a:hover {
   padding: 1.1rem 0 1.5rem;
 }
 
+/* the logo stands a little left of the content's edge, by a share of the gutter,
+   so it never reaches the window's */
 .brand {
   display: inline-flex;
   align-items: center;
+  margin-left: calc(var(--gutter) * -0.35);
 }
 
 .brand img {
   display: block;
-  height: 2.25rem;
+  height: 2.75rem;
   width: auto;
 }
 
@@ -183,14 +187,8 @@ a:focus-visible {
 
 .source-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
-}
-
-/* a single card outside the grid (the history page's) keeps a card's width */
-.source-slot {
-  display: grid;
-  grid-template-columns: minmax(0, 560px);
 }
 
 .source-card {
@@ -258,7 +256,7 @@ a.source-card:focus-visible .card-cta {
 
 .card-id dd.sensor {
   color: var(--text);
-  font-size: 1.1rem;
+  font-size: 1rem; /* a step under the reading, which leads the card */
   font-weight: 600;
 }
 
@@ -266,43 +264,47 @@ a.source-card:focus-visible .card-cta {
   color: var(--text-secondary);
 }
 
-/* one tile per current reading, in the pollutant's colour */
+/* what the sensor reads now, first on the card: one tile per current reading, the card's
+   headline rather than a box in it. The readings are one group and the identity under
+   them another: closer to each other than to it */
 .tiles {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.6rem 1.5rem;
+  margin-bottom: 0.3rem;
 }
 
 .tile {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+  flex: 1 1 7.5rem;
   min-width: 7.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--raised);
-  border-radius: var(--radius-small);
-  border-left: 3px solid var(--pollutant, var(--muted));
+  padding-left: 0.8rem;
+  border-left: 3px solid var(--border-strong);
 }
 
 .tile-name {
-  color: var(--pollutant, var(--muted));
+  color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 600;
 }
 
 .tile-value {
-  font-size: 1.45rem;
+  font-size: 2rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 .tile-value .unit {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0;
 }
 
-/* a current reading above its threshold: the value and the tile's edge turn
-   warm; the pollutant's name keeps its colour and the card stays as it is */
+/* a current reading above its threshold: the value and the tile's edge turn warm, the
+   only colour a reading ever takes; nothing else on the card changes */
 .tile.exceeding {
   border-left-color: var(--exceed);
 }
@@ -311,8 +313,12 @@ a.source-card:focus-visible .card-cta {
   color: var(--exceed);
 }
 
+/* as tall as a reading, so the identities of a row of cards line up */
 .no-readings {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  min-height: 3.45rem;
+  margin: 0 0 0.3rem;
   color: var(--muted);
   font-style: italic;
 }
@@ -353,6 +359,28 @@ a.source-card:focus-visible .card-cta {
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.15s;
+}
+
+/* the card outside the grid (the history page's) is a strip across the page: the
+   reading, the identity, and when it reported at the far end */
+.source-slot .source-card {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 3rem;
+}
+
+.source-slot .tiles,
+.source-slot .no-readings {
+  margin-bottom: 0;
+}
+
+.source-slot .tile {
+  flex: 0 0 auto;
+}
+
+.source-slot .card-foot {
+  margin: 0 0 0 auto;
 }
 
 /* inline SVG glyphs: sized to the text, drawn in its colour */
@@ -404,6 +432,7 @@ a.source-card:focus-visible .card-cta {
   width: 14px;
   height: 3px;
   border-radius: 2px;
+  background: var(--reading);
 }
 
 .summary {
@@ -416,14 +445,17 @@ a.source-card:focus-visible .card-cta {
   font-variant-numeric: tabular-nums;
 }
 
+/* a chart takes the height the window has left: 452px is what stands above and below it
+   (the header, the sensor's strip, the controls, the chart card's own head), so the chart
+   cards end above the fold; to be changed when any of those changes height */
 .chart-box {
   position: relative;
-  height: 280px;
+  height: clamp(280px, calc(100vh - 452px), 640px);
 }
 
 @media (max-width: 600px) {
   body {
-    padding: 0 1rem 2rem;
+    padding-bottom: 2rem; /* the gutter is at its least, 1rem, by this width */
   }
 
   .source-grid {
